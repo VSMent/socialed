@@ -1,17 +1,34 @@
 import { Meteor } from 'meteor/meteor';
+import { publishComposite } from 'meteor/reywood:publish-composite';
 import PostsCollection from '../collection';
 
-Meteor.publish('posts', function() {
+publishComposite('posts', function({ page, selectedUsers }) {
   if (!this.userId) return this.ready();
-  return PostsCollection.find({
-    // userId: this.userId
-  }, {
-    // fields: {
-    //   createdAt: false
-    // },
-    sort: {
-      createdAt: -1
-    }
-  });
+  return {
+    find(){
+      return PostsCollection.find({
+        ...(selectedUsers.length ? { userId: { $in: selectedUsers } } : {})
+      }, {
+        sort: {
+          createdAt: -1
+        },
+        limit: 10,
+        skip: (page - 1) * 10,
+      });
+    },
+    children: [
+      {
+        find(post){
+          return Meteor.users.find(post.userId, { fields: { 'profile.fullName': 1 }});
+        }
+      },
+      // {
+      //   find(post){
+      //     return customElements.find({postId: post._id})
+      //   },
+
+      // }
+    ]
+  }
 });
 
